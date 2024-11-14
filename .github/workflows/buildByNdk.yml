@@ -38,8 +38,8 @@ jobs:
 
       - name: Download and extract NDK
         run: |
-          wget https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip
-          unzip android-ndk-${NDK_VERSION}-linux.zip
+          wget https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux-x86_64.zip
+          unzip android-ndk-${NDK_VERSION}-linux-x86_64.zip
           echo "NDK_HOME=$(pwd)/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
 
       - name: Configure environment
@@ -48,8 +48,8 @@ jobs:
           echo "TOOLCHAIN_PREFIX=llvm" >> $GITHUB_ENV
           echo "CC=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOLCHAIN_PREFIX}-gcc" >> $GITHUB_ENV
           echo "CXX=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOLCHAIN_PREFIX}-g++" >> $GITHUB_ENV
-          echo "CFLAGS=--sysroot=${NDK_HOME}/platforms/${NDK_PLATFORM}/arch-arm" >> $GITHUB_ENV
-          echo "LDFLAGS=--sysroot=${NDK_HOME}/platforms/${NDK_PLATFORM}/arch-arm -ldl" >> $GITHUB_ENV
+          echo "CFLAGS=--sysroot=${NDK_HOME}/toolchains\llvm\prebuilt\linux-x86_64\sysroot\usr" >> $GITHUB_ENV
+          echo "LDFLAGS=--sysroot=${NDK_HOME}/toolchains\llvm\prebuilt\linux-x86_64\sysroot\usr -ldl" >> $GITHUB_ENV
 
       - name: Build elf loader, proot
         run: |
@@ -67,7 +67,7 @@ jobs:
         continue-on-error: true
         run: ([ -f test.log ] && cat test.log) || true
 
-      - name: Upload artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: proot-binaries
