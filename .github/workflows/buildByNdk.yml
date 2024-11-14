@@ -44,12 +44,13 @@ jobs:
 
       - name: Configure environment
         run: |
+          export SYSROOT=${NDK_HOME}/toolchains\llvm\prebuilt\linux-x86_64\sysroot\usr
           echo "PATH=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH" >> $GITHUB_ENV
           echo "TOOLCHAIN_PREFIX=llvm" >> $GITHUB_ENV
           echo "CC=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOLCHAIN_PREFIX}-gcc" >> $GITHUB_ENV
           echo "CXX=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOLCHAIN_PREFIX}-g++" >> $GITHUB_ENV
-          echo "CFLAGS=--sysroot=${NDK_HOME}/toolchains\llvm\prebuilt\linux-x86_64\sysroot\usr" >> $GITHUB_ENV
-          echo "LDFLAGS=--sysroot=${NDK_HOME}/toolchains\llvm\prebuilt\linux-x86_64\sysroot\usr -ldl" >> $GITHUB_ENV
+          echo "CFLAGS=--sysroot=${SYSROOT} -I${SYSROOT}/include" >> $GITHUB_ENV
+          echo "LDFLAGS=--sysroot=${SYSROOT} -L${SYSROOT}/lib -ldl" >> $GITHUB_ENV
 
       - name: Build elf loader, proot
         run: |
