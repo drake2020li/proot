@@ -68,7 +68,7 @@ jobs:
         run: ([ -f test.log ] && cat test.log) || true
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: proot-binaries
           path: ./src/proot  # 假设proot可执行文件生成在当前目录下
