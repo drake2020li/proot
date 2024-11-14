@@ -1,0 +1,74 @@
+name: Build Proot with NDK
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: "${{ matrix.SECCOMP == '1' && 'seccomp' || 'no-seccomp' }}"
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: r27c  # 你想要使用的NDK版本
+      NDK_PLATFORM: android-31  # 目标Android API级别
+
+    strategy:
+      fail-fast: false
+      matrix:
+        SECCOMP: [ 0, 1 ]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install sonar-scanner and build-wrapper
+        uses: sonarsource/sonarcloud-github-c-cpp@v1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq clang-tools-12 curl gdb lcov libarchive-dev libtalloc-dev sloccount strace swig uthash-dev python3-dev lzop
+
+      - name: Gather analytics
+        run: sloccount --details .
+
+      - name: Download and extract NDK
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux-x86_64.zip
+          unzip android-ndk-${NDK_VERSION}-linux-x86_64.zip
+          echo "NDK_HOME=$(pwd)/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
+
+      - name: Configure environment
+        run: |
+          echo "PATH=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH" >> $GITHUB_ENV
+          echo "TOOLCHAIN_PREFIX=llvm" >> $GITHUB_ENV
+          echo "CC=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOLCHAIN_PREFIX}-gcc" >> $GITHUB_ENV
+          echo "CXX=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${TOOLCHAIN_PREFIX}-g++" >> $GITHUB_ENV
+          echo "CFLAGS=--sysroot=${NDK_HOME}/platforms/${NDK_PLATFORM}/arch-arm" >> $GITHUB_ENV
+          echo "LDFLAGS=--sysroot=${NDK_HOME}/platforms/${NDK_PLATFORM}/arch-arm -ldl" >> $GITHUB_ENV
+
+      - name: Build elf loader, proot
+        run: |
+          make -C src loader.elf loader-m32.elf build.h
+          env CFLAGS="$CFLAGS --coverage" LDFLAGS="$LDFLAGS --coverage" make -C src proot V=1
+
+      - name: Execute test suite
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          env ${{ matrix.SECCOMP == '0' && 'PROOT_NO_SECCOMP=1' || '' }} PATH=/bin:/usr/bin:/sbin:/usr/sbin:$PWD/src make -C test -j $(nproc) QUIET_LOG=$PWD/test.log
+
+      - name: Output test log
+        if: always()
+        continue-on-error: true
+        run: ([ -f test.log ] && cat test.log) || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: proot-binaries
+          path: ./src/proot  # 假设proot可执行文件生成在当前目录下
