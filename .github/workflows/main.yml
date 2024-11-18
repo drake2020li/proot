@@ -1,4 +1,4 @@
-name: build
+name: build-amd64
 
 on:
   push:
